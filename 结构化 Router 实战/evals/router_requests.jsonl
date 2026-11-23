@@ -1,0 +1,30 @@
+{"request":"解释 TCP 三次握手","expected_task":"chat"}
+{"request":"用通俗语言说明为什么哈希表查找平均是 O(1)","expected_task":"chat"}
+{"request":"比较同步和异步 I/O 的区别","expected_task":"chat"}
+{"request":"介绍 REST API 和 GraphQL 的主要差异","expected_task":"chat"}
+{"request":"解释 Python 的装饰器是什么，给一个简单例子","expected_task":"chat"}
+{"request":"写一封简洁专业的项目进度通知邮件","expected_task":"chat"}
+{"request":"把这段话改得更礼貌：会议改期到明天下午","expected_task":"chat"}
+{"request":"概述 Kubernetes Pod、Deployment 和 Service 的关系","expected_task":"chat"}
+{"request":"解释数据库事务的 ACID 四个特性","expected_task":"chat"}
+{"request":"给初学者讲解 HTTPS 中证书的作用","expected_task":"chat"}
+{"request":"搜索今天最新的 Agent SDK 变化","expected_task":"research"}
+{"request":"调查当前主流 Python 包管理工具的最新版本和差异","expected_task":"research"}
+{"request":"查找 OpenAI、Anthropic 和 Google 最近发布的模型更新","expected_task":"research"}
+{"request":"搜索 React 最近一个稳定版本的新增功能和破坏性变更","expected_task":"research"}
+{"request":"调研国内外常见的向量数据库及其适用场景","expected_task":"research"}
+{"request":"找出 PostgreSQL 最近版本修复的安全漏洞摘要","expected_task":"research"}
+{"request":"比较当前云函数平台的冷启动优化方案","expected_task":"research"}
+{"request":"搜索今天关于 Agent 记忆机制的最新技术文章","expected_task":"research"}
+{"request":"调研如何在生产环境中评估 RAG 系统的检索质量","expected_task":"research"}
+{"request":"查找当前主流 MCP 客户端对远程工具连接的支持情况","expected_task":"research"}
+{"request":"修复这个 Python 项目测试","expected_task":"coding"}
+{"request":"帮我实现一个带分页的 FastAPI 用户列表接口","expected_task":"coding"}
+{"request":"重构这段代码，消除重复逻辑并补充类型注解","expected_task":"coding"}
+{"request":"定位订单创建接口的空指针异常并修复","expected_task":"coding"}
+{"request":"给现有 Python 模块添加单元测试和边界条件测试","expected_task":"coding"}
+{"request":"在 React 页面中增加加载、空状态和错误重试状态","expected_task":"coding"}
+{"request":"优化这条 SQL 查询并创建合适的索引","expected_task":"coding"}
+{"request":"把仓库里的同步文件读取改成异步实现","expected_task":"coding"}
+{"request":"修复 Docker 构建失败并更新 Dockerfile","expected_task":"coding"}
+{"request":"实现用户登录接口，并接入密码哈希与会话校验","expected_task":"coding"}
