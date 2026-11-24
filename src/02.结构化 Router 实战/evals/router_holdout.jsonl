@@ -1,0 +1,25 @@
+{"request":"总结这篇论文的核心贡献","expected_task":"chat"}
+{"request":"把上面的结论改写成三条要点","expected_task":"chat"}
+{"request":"什么是幂等性","expected_task":"chat"}
+{"request":"举一个依赖注入的例子","expected_task":"chat"}
+{"request":"解释 CAP 定理在分布式系统中的取舍","expected_task":"chat"}
+{"request":"帮我把会议纪要去掉口语表达","expected_task":"chat"}
+{"request":"用 barcode 举例说明前缀树","expected_task":"chat"}
+{"request":"请介绍 ｒｅａｃｔ 和 ｖｕｅ 的区别","expected_task":"chat"}
+{"request":"解释一下什么是 code review","expected_task":"chat"}
+{"request":"查询 React 19 的最新稳定版本","expected_task":"research"}
+{"request":"调研两阶段提交与 Saga 的差异","expected_task":"research"}
+{"request":"看看今天 Hacker News 上关于 AI Agent 的最新讨论","expected_task":"research"}
+{"request":"比较当前 Postgres 和 MySQL 的全文检索能力","expected_task":"research"}
+{"request":"找出最近关于提示注入攻击的论文","expected_task":"research"}
+{"request":"查找当前 MCP 服务器对远程连接的支持情况","expected_task":"research"}
+{"request":"搜索 Docker 最新版本的安全公告","expected_task":"research"}
+{"request":"compare 当前主流向量数据库","expected_task":"research"}
+{"request":"把这段同步逻辑改成 asyncio 实现","expected_task":"coding"}
+{"request":"为订单服务补充集成测试","expected_task":"coding"}
+{"request":"修复 CI 里的 lint 报错","expected_task":"coding"}
+{"request":"新增一个导出 CSV 的接口","expected_task":"coding"}
+{"request":"重构日志模块，去掉全局状态","expected_task":"coding"}
+{"request":"排查线上接口 500 错误并提交修复","expected_task":"coding"}
+{"request":"把同步代码改成异步实现并补充单元测试","expected_task":"coding"}
+{"request":"为登录流程补充边界条件测试","expected_task":"coding"}

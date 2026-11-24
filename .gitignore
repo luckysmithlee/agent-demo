@@ -40,5 +40,15 @@ logs/
 *.swp
 *.swo
 
+# 代码图谱 / 分析产物
+.codegraph/*
+!.codegraph/.gitignore
+graphify-out/
+
+# 编辑器临时文件
+*.tmp
+.~*
+
 # macOS
 .DS_Store
+**/.DS_Store
