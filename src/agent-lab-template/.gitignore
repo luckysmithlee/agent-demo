@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 测试 / 类型检查 / 覆盖率
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 日志
+*.log
+logs/
+
+# 评测与运行时产物
+runs/
+evals/results/
+evals/outputs/
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+.~*
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb.tmp
+
+# Agent 工具产物
+.codegraph/
+graphify-out/
+
+# macOS / Windows
+.DS_Store
+**/.DS_Store
+Thumbs.db
+Desktop.ini
