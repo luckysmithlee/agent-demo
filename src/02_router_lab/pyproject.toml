@@ -9,7 +9,9 @@ description = "Structured task router experiments for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "openai>=1.0",
     "pydantic>=2.5,<3",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

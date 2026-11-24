@@ -1,5 +1,6 @@
 """Task routing primitives for agent requests."""
 
+from .llm_client import build_completer
 from .router import (
     InvalidRequestError,
     RouteConfig,
@@ -18,6 +19,7 @@ __all__ = [
     "RouteResult",
     "RuleBasedRouter",
     "TaskType",
+    "build_completer",
     "measure_route",
     "route_request",
 ]

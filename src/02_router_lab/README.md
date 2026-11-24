@@ -7,6 +7,7 @@
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+pip install -e ../..          # 共享包 agent_common：统一加载根目录 .env
 pip install -e ".[dev]"
 
 pytest -q
@@ -24,6 +25,7 @@ src/router_lab/
 ├── task_types.py       # TaskType 枚举
 ├── eval_runner.py      # 评测、分层指标、混淆矩阵、门禁 CLI
 ├── structured_llm.py   # LLM JSON schema 校验、重试、非法输出率
+├── llm_client.py       # DeepSeek 补全客户端（OpenAI 兼容，读取根目录 .env）
 ├── dispatch.py         # TaskType -> handler / 工具白名单
 └── observability.py    # 脱敏路由事件（请求指纹，不含原文）
 evals/

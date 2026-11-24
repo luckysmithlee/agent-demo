@@ -1,11 +1,11 @@
 [project]
-name = "agent-lab"
+name = "event-planner"
 version = "0.1.0"
-description = "A local playground for experimenting and iterating on AI Agent capabilities."
+description = "协会活动策划 Agent。"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    # 运行时依赖按需添加
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

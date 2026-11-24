@@ -1,11 +1,12 @@
 [project]
+# 复制模板后请改成唯一包名，例如目录 04_xxx_lab -> name = "xxx-lab"
 name = "agent-lab"
 version = "0.1.0"
 description = "A local playground for experimenting and iterating on AI Agent capabilities."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    # 运行时依赖按需添加
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
