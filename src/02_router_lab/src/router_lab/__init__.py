@@ -1,4 +1,4 @@
-"""Single-agent routing primitives for agent requests."""
+"""用于智能体请求的单智能体路由基础组件。"""
 
 from .agent import (
     AgentTurn,

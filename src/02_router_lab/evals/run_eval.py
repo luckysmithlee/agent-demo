@@ -1,4 +1,4 @@
-"""Thin wrapper so the eval runs without installing the package."""
+"""无需安装包即可运行评测的轻量入口。"""
 import sys
 from pathlib import Path
 

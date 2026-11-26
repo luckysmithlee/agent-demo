@@ -71,6 +71,7 @@ def _confidence_bucket(confidence: float) -> str:
 
 
 def load_rows(path: Path) -> list[dict[str, str]]:
+    """读取并校验 JSONL；按规范化后的请求去重，拒绝空数据集。"""
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
     with path.open("r", encoding="utf-8") as handle:
@@ -104,6 +105,7 @@ def load_rows(path: Path) -> list[dict[str, str]]:
 
 
 def _per_class_metrics(confusion: dict[str, dict[str, int]]) -> dict[str, dict]:
+    """从混淆矩阵计算各类别指标；行是实际标签，列是预测标签。"""
     metrics = {}
     for label in LABELS:
         true_positive = confusion[label][label]
@@ -126,12 +128,14 @@ def _per_class_metrics(confusion: dict[str, dict[str, int]]) -> dict[str, dict]:
 
 
 def _p95(values: list[float]) -> float:
+    """用最近秩法计算第 95 百分位；调用方须保证列表非空。"""
     ordered = sorted(values)
     index = max(0, (95 * len(ordered) + 99) // 100 - 1)
     return ordered[index]
 
 
 def run_eval(path: Path = DEFAULT_DATASETS[0]) -> dict:
+    """评估一个数据集，返回准确率、误触发率、时延及分类明细。"""
     router = RuleBasedRouter()
     rows = load_rows(path)
     stats = DatasetStats()
@@ -163,6 +167,7 @@ def run_eval(path: Path = DEFAULT_DATASETS[0]) -> dict:
         "total": stats.total,
         "correct": stats.correct,
         "route_accuracy": round(stats.correct / stats.total, 4),
+        # 分母是实际为 chat 的样本数；没有该类样本时按 0 报告并同时给出支持数。
         "false_tool_rate": round(
             stats.false_tool_count / stats.chat_support if stats.chat_support else 0.0,
             4,
@@ -189,6 +194,7 @@ def run_eval(path: Path = DEFAULT_DATASETS[0]) -> dict:
 
 
 def check_gate(report: dict, thresholds: GateThresholds) -> list[str]:
+    """返回所有未达标项；空列表表示通过质量门槛。"""
     violations = []
     if report["route_accuracy"] < thresholds.min_accuracy:
         violations.append(

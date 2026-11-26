@@ -1,8 +1,8 @@
-"""Route event records that are safe to log.
+"""可安全记录的路由事件。
 
-Raw request text never leaves this module; only a short stable fingerprint.
-``tools_exposed`` records the blast radius of a turn: which tools the single
-agent could have called, not which ones it did call.
+原始请求文本不会离开此模块，只输出简短且稳定的指纹。
+``tools_exposed`` 记录当前轮次的影响范围，即单智能体可以调用的工具，
+而非实际调用过的工具。
 """
 
 import hashlib
@@ -25,6 +25,7 @@ class RouteEvent:
 
 
 def request_fingerprint(request: str) -> str:
+    """对规范化请求生成短指纹；截断哈希可能碰撞，也不能防止猜测常见请求。"""
     normalized = normalize_text(request)
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
 
@@ -32,6 +33,7 @@ def request_fingerprint(request: str) -> str:
 def build_route_event(
     request: str, result: RouteResult, elapsed_ms: float
 ) -> RouteEvent:
+    """将路由结果转成事件，并记录按任务类型允许使用的工具。"""
     return RouteEvent(
         request_fingerprint=request_fingerprint(request),
         task_type=result.task_type.value,

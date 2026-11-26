@@ -1,10 +1,9 @@
-"""Versioned keyword rules for the deterministic router.
+"""确定性路由器使用的版本化关键词规则。
 
-Weights encode evidence strength:
+权重表示证据强度：
 
-* 2 points: the keyword is strong evidence for the task type.
-* 1 point: the keyword is ambiguous on its own. It only counts when it
-  combines with another signal, which keeps false positives down.
+* 2 分：关键词是任务类型的强证据。
+* 1 分：单独的关键词含义不明确；默认情况下需结合其他信号才能达到路由阈值。
 """
 
 from dataclasses import dataclass
@@ -17,6 +16,8 @@ WEAK = 1
 
 @dataclass(frozen=True)
 class KeywordRule:
+    """一条关键词及其命中后贡献的证据分数。"""
+
     keyword: str
     weight: int
 

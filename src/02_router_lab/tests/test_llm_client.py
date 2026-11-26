@@ -1,7 +1,9 @@
 import json
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
+from openai import APITimeoutError
 
 from agent_common import Settings
 from router_lab import llm_client
@@ -22,12 +24,14 @@ def settings(**overrides):
     return Settings(**values)
 
 
-def fake_openai(monkeypatch, content: str | None):
+def fake_openai(monkeypatch, content: str | None, *, error: APITimeoutError | None = None):
     calls: dict = {}
 
     class FakeCompletions:
         def create(self, **kwargs):
             calls["request"] = kwargs
+            if error is not None:
+                raise error
             message = SimpleNamespace(content=content)
             return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
@@ -59,12 +63,24 @@ def test_forwards_prompt_and_returns_text(monkeypatch):
     assert complete("怎么理解向量检索？") == valid_output()
     assert calls["client"]["api_key"] == "test-key"
     assert calls["client"]["base_url"] == "https://api.example.test"
+    assert calls["client"]["timeout"] == 10.0
+    assert calls["client"]["max_retries"] == 0
     assert calls["request"]["model"] == "deepseek-v4.1-flash"
     assert calls["request"]["temperature"] == 0
     assert calls["request"]["messages"][-1] == {
         "role": "user",
         "content": "怎么理解向量检索？",
     }
+
+
+def test_timeout_is_translated_for_router(monkeypatch):
+    error = APITimeoutError(request=Mock())
+    fake_openai(monkeypatch, None, error=error)
+
+    with pytest.raises(TimeoutError, match="DeepSeek 模型请求超时") as exc:
+        build_completer(settings())("解释一下什么是 RAG")
+
+    assert exc.value.__cause__ is error
 
 
 def test_none_content_becomes_empty_string(monkeypatch):

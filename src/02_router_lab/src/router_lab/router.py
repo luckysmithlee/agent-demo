@@ -8,6 +8,7 @@ from .task_types import TaskType
 
 MAX_REQUEST_LENGTH = 10_000
 
+# 英文关键词按 ASCII 单词边界匹配，避免 code 误命中 barcode；中文仍按子串匹配。
 _ASCII_PATTERNS: dict[str, re.Pattern[str]] = {
     rule.keyword: re.compile(
         rf"(?<![a-z0-9_]){re.escape(rule.keyword)}(?![a-z0-9_])"
@@ -23,6 +24,8 @@ class InvalidRequestError(ValueError):
 
 @dataclass(frozen=True)
 class RouteResult:
+    """路由结论及其依据；fallback_recommended 只是建议，不会自动执行回退。"""
+
     task_type: TaskType
     confidence: float
     reason: str = ""
@@ -33,17 +36,20 @@ class RouteResult:
 
 @dataclass(frozen=True)
 class RouteConfig:
+    """min_score 控制最低证据分数，confidence_threshold 控制回退建议。"""
+
     min_score: int = 2
     confidence_threshold: float = 0.70
 
 
 def normalize_text(text: str) -> str:
-    """NFKC-normalize, lowercase, and collapse whitespace."""
+    """统一全角等兼容字符、大小写和空白，使写法不同的请求更容易匹配。"""
     normalized = unicodedata.normalize("NFKC", text).lower()
     return re.sub(r"\s+", " ", normalized).strip()
 
 
 def validate_request(request: str, max_length: int = MAX_REQUEST_LENGTH) -> str:
+    """返回去除首尾空白的请求；非字符串、空请求或超长时抛出 InvalidRequestError。"""
     if not isinstance(request, str):
         raise InvalidRequestError("request must be a string")
 
@@ -56,7 +62,7 @@ def validate_request(request: str, max_length: int = MAX_REQUEST_LENGTH) -> str:
 
 
 def match_rules(text: str, rules: tuple[KeywordRule, ...]) -> list[KeywordRule]:
-    """Return rules that match ``text``. Input must be normalized."""
+    """返回匹配 ``text`` 的规则；输入必须已规范化，每条规则最多计一次。"""
     hits = []
     for rule in rules:
         if rule.keyword.isascii():
@@ -72,13 +78,14 @@ def score_hits(hits: list[KeywordRule]) -> int:
 
 
 def _confidence(score: int, margin: int) -> float:
+    # 这是基于得分和分差的启发式数值，不是经过校准的概率。
     base = 0.60 + 0.06 * score
     margin_bonus = min(0.12, 0.03 * max(0, margin))
     return round(min(0.98, base + margin_bonus), 2)
 
 
 class RuleBasedRouter:
-    """Deterministic router. Scores keyword evidence instead of first-match."""
+    """确定性路由器，根据关键词证据评分，而非取首个匹配。"""
 
     MAX_REQUEST_LENGTH = MAX_REQUEST_LENGTH
 
@@ -86,6 +93,7 @@ class RuleBasedRouter:
         self.config = config or RouteConfig()
 
     def route(self, request: str) -> RouteResult:
+        """校验请求并比较两类关键词权重，返回类型、依据和回退建议。"""
         text = validate_request(request, self.MAX_REQUEST_LENGTH)
         normalized = normalize_text(text)
 
@@ -94,6 +102,7 @@ class RuleBasedRouter:
         coding_score = score_hits(coding_hits)
         research_score = score_hits(research_hits)
 
+        # 证据不足或双方平分时保守地归为 chat，并建议调用方进一步处理。
         if coding_score < self.config.min_score and research_score < self.config.min_score:
             matched = tuple(rule.keyword for rule in (*coding_hits, *research_hits))
             if coding_score == 0 and research_score == 0:
@@ -147,12 +156,12 @@ class RuleBasedRouter:
 
 
 def route_request(request: str) -> RouteResult:
-    """Public convenience API for the default router."""
+    """默认路由器的公共便捷接口。"""
     return RuleBasedRouter().route(request)
 
 
 def measure_route(request: str) -> tuple[RouteResult, float]:
-    """Route a request and return the result with elapsed milliseconds."""
+    """路由请求并返回结果和耗时（毫秒）。"""
     started_at = perf_counter()
     result = route_request(request)
     elapsed_ms = (perf_counter() - started_at) * 1000

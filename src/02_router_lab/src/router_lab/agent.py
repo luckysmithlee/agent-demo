@@ -1,10 +1,8 @@
-"""Single-agent runtime: one turn contract, one tool registry.
+"""单智能体运行时：统一轮次契约与工具注册表。
 
-The router is an intent detector, not an agent selector. Every request is
-handled by the same agent; the detected intent only supplies a short behavior
-hint and narrows which capabilities are exposed for that turn. Tool
-permissions are derived from one registry plus a capability policy, so adding
-a tool never means editing a per-task handler table.
+路由器检测意图，不选择智能体。所有请求由同一个智能体处理；检测出的意图
+仅提供简短的行为提示，并收窄当前轮次可用的能力。工具权限由统一注册表和
+能力策略决定，因此新增工具时无需修改各任务的处理表。
 """
 
 from dataclasses import dataclass
@@ -17,7 +15,7 @@ from .task_types import TaskType
 
 
 class Router(Protocol):
-    """Anything exposing ``route(request) -> RouteResult``."""
+    """提供 ``route(request) -> RouteResult`` 的对象。"""
 
     def route(self, request: str) -> RouteResult: ...
 
@@ -44,7 +42,7 @@ TOOLS: Mapping[str, ToolSpec] = MappingProxyType(
 
 @dataclass(frozen=True)
 class IntentCapability:
-    """Capabilities the single agent may use while handling one intent."""
+    """单智能体处理一种意图时可使用的能力。"""
 
     side_effects: bool = False
     network: bool = False
@@ -52,11 +50,11 @@ class IntentCapability:
 
 CAPABILITIES: Mapping[TaskType, IntentCapability] = MappingProxyType(
     {
-        # chat keeps the hard invariant: no tools at all.
+        # chat 严格禁止使用任何工具。
         TaskType.CHAT: IntentCapability(),
-        # research may read the network but must not change the machine.
+        # research 可读取网络，但不能修改本机。
         TaskType.RESEARCH: IntentCapability(network=True),
-        # coding gets the full single-agent toolset.
+        # coding 可使用完整的单智能体工具集。
         TaskType.CODING: IntentCapability(side_effects=True, network=True),
     }
 )
@@ -90,7 +88,7 @@ class ToolNotPermittedError(PermissionError):
 
 @dataclass(frozen=True)
 class ToolScope:
-    """Tools exposed for one turn, derived from the intent capability."""
+    """根据意图能力确定的当前轮次可用工具。"""
 
     intent: TaskType
     tools: frozenset[str]
@@ -101,7 +99,7 @@ class ToolScope:
 
 @dataclass(frozen=True)
 class AgentTurn:
-    """Everything the single agent loop needs for one user request."""
+    """单智能体处理一个用户请求所需的全部信息。"""
 
     request: str
     intent: TaskType
@@ -144,12 +142,11 @@ def tool_allowed(intent: TaskType, tool: str) -> bool:
 
 
 class SingleAgent:
-    """The only agent in the system.
+    """系统中唯一的智能体。
 
-    ``router`` is any object with ``route()`` (rule router, structured LLM
-    router, or a test double). ``executors`` maps tool names to callables so
-    the lab stays offline-testable; unregistered tools fail loudly instead of
-    silently pretending to run.
+    ``router`` 可以是任何提供 ``route()`` 的对象（规则路由器、结构化 LLM
+    路由器或测试替身）。``executors`` 将工具名映射到可调用对象，使实验
+    可以离线测试；未注册的工具会明确报错，而不会假装运行成功。
     """
 
     def __init__(
@@ -165,7 +162,7 @@ class SingleAgent:
             self._executors[name] = executor
 
     def begin(self, request: str) -> AgentTurn:
-        """Start a turn. There is no handler switch: only the scope narrows."""
+        """开始一个轮次；不切换处理器，只收窄工具范围。"""
         text = validate_request(request)
         result = self._router.route(text)
         intent = TaskType(result.task_type)
@@ -182,10 +179,9 @@ class SingleAgent:
         )
 
     def call_tool(self, turn: AgentTurn, tool: str, **kwargs) -> str:
-        """Execute a tool after re-checking the turn scope.
+        """重新检查当前轮次的范围后执行工具。
 
-        The check is repeated here on purpose: the scope is a runtime guard,
-        not just a hint in the prompt.
+        此处再次检查，是因为范围也是运行时保护，而不只是提示词中的提示。
         """
         if tool not in TOOLS:
             raise UnknownToolError(f"unknown tool {tool!r}")

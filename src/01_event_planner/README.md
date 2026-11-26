@@ -1,22 +1,38 @@
-# event-planner
+# 活动策划实战
 
-协会活动策划 Agent（由 `agent_common/template` 复制而来）。
+设计一位活动策划助手，为 100 人、预算上限 2500 元的 AI Agent 交流会生成草案。先定义它能读取什么、依据什么选择场地、在哪一步交给主办方审批，再考虑接入模型。 [飞书文档 §1.7](https://my.feishu.cn/docx/VytpdGqFGoX0h2xuVPfckjpDnTg#doxcnwd7PbQfkqTnAna92aBxNme)
 
-## 快速开始
+## 能力与审批
+
+| 能力 | 策划阶段的用途 |
+| --- | --- |
+| 查场地 | 记录容量、报价、档期和来源 |
+| 查政策 | 确认场地的餐饮、设备和活动规则 |
+| 查时间 | 提供候选时段，与场地档期核对 |
+| 估算预算 | 汇总场地、茶歇、物料和应急预留 |
+| 预订场地、创建日历、发布活动、发送通知 | 各项外部操作需要取得相应审批 |
+
+程序记录预计人数、预算、场地候选、拟选场地、时间、议程和发布审批状态。容量、报价和档期均有依据后，按候选顺序选出第一个满足约束的场地。缺少证据的候选标记为「待确认」。场地判断使用整场预计总额，容量和总额恰好达到限制时仍符合约束。
+
+有合格场地时，程序输出草案和拟提交审批的操作，并停在「待审批」。没有合格场地时，保留候选与预算明细，发布审批标为「暂不提交」。示例使用虚构的场地记录和时间，运行时只向终端输出草案。
+
+## 运行示例
 
 ```bash
 cd src/01_event_planner
+PYTHONPATH=src python -m event_planner
+```
+
+示例依次展示容量不足、超预算、档期待确认和刚好满足限制的四条场地记录。把最后一条记录的档期设为 `None` 再运行，比较拟选场地和审批状态。
+
+## 测试
+
+```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ../..          # 共享包 agent_common
 pip install -e ".[dev]"
 pytest tests/
 ```
-
-约定：
-
-- 每个 Lab 使用自己的 `.venv`；根目录 `.venv` 只用于 IDE 解析和当前在做的 Lab
-- 环境变量统一放在仓库根目录 `.env`，由 `agent_common` 加载，不要在 Lab 内新建
 
 ## 目录结构
 
@@ -24,15 +40,6 @@ pytest tests/
 event-planner/
 ├── README.md
 ├── pyproject.toml
-├── src/event_planner/   # 源码包
-├── tests/               # 单元测试
-├── evals/               # 评测集与评测脚本
-└── docs/                # 设计文档与笔记
+├── src/event_planner/   # 草案规则和离线示例
+└── tests/               # 人数、预算、证据与审批边界
 ```
-
-## 开发说明
-
-- 源码放在 `src/` 下；
-- 单元测试放在 `tests`，随代码一起迭代；
-- 效果评测数据、Prompt 与评测脚本放在 `evals`；
-- 架构设计、决策记录等文档放在 `docs`。

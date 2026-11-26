@@ -2,7 +2,9 @@ import json
 
 import pytest
 
-from router_lab.router import InvalidRequestError
+from router_lab import SingleAgent
+from router_lab.router import InvalidRequestError, RuleBasedRouter
+from router_lab.rules import ROUTER_VERSION
 from router_lab.structured_llm import (
     InvalidRouteDecision,
     RouteDecision,
@@ -89,6 +91,46 @@ def test_router_raises_after_all_attempts_fail():
 
     assert router.stats()["attempts"] == 2
     assert router.invalid_output_rate == 1.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "attempts"),
+    [("not json", 2), (valid_output(confidence=0.69), 1)],
+    ids=["invalid-output", "low-confidence"],
+)
+def test_single_agent_uses_rule_scope_on_fallback(raw, attempts):
+    router = StructuredLLMRouter(lambda _: raw, max_attempts=2, fallback=RuleBasedRouter())
+
+    turn = SingleAgent(router=router).begin("你好，随便聊聊")
+
+    assert turn.intent == TaskType.CHAT
+    assert turn.scope.tools == frozenset()
+    assert turn.router_version == ROUTER_VERSION
+    assert router.stats()["attempts"] == attempts
+
+
+def test_timeout_falls_back_without_retry():
+    def complete(_):
+        raise TimeoutError("model request timed out")
+
+    fallback = RuleBasedRouter()
+    router = StructuredLLMRouter(complete, fallback=fallback)
+    request = "解释 RAG"
+
+    assert router.route(request) == fallback.route(request)
+    assert router.stats()["attempts"] == 1
+    assert router.stats()["invalid_outputs"] == 0
+
+
+def test_fallback_preserves_model_result_at_threshold():
+    fallback = RuleBasedRouter()
+    raw = valid_output(confidence=fallback.config.confidence_threshold)
+    router = StructuredLLMRouter(lambda _: raw, fallback=fallback)
+
+    result = router.route("修复这个 Python 项目的测试")
+
+    assert result.task_type == TaskType.CODING
+    assert result.router_version.startswith("llm:")
 
 
 def test_router_validates_request():

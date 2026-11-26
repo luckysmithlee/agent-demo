@@ -2,6 +2,8 @@
 
 把用户请求识别为 `chat` / `research` / `coding` 意图，但意图不再用来选择不同 Agent：整个 Lab 只有一个 Agent、一套工具注册表。意图只决定本轮的行为提示和工具能力范围。规则路由是零依赖、可离线评测的主路径；LLM 结构化路由实现同一个 `route()` 接口，可以直接替换。
 
+本实战沿用原文的三类意图和评测指标，将分类结果用于单 Agent 的工具授权。 [结构化 Router 实战 §2.11](https://my.feishu.cn/docx/VytpdGqFGoX0h2xuVPfckjpDnTg#doxcnv8ibL1XgyZyxkbZ0VW1FBf)
+
 ## 快速开始
 
 ```bash
@@ -27,8 +29,7 @@ src/router_lab/
 ├── eval_runner.py      # 评测、分层指标、混淆矩阵、门禁 CLI
 ├── structured_llm.py   # LLM JSON schema 校验、重试、非法输出率
 ├── llm_client.py       # DeepSeek 补全客户端（OpenAI 兼容，读取根目录 .env）
-├── observability.py    # 脱敏路由事件（请求指纹 + 暴露的工具，不含原文）
-└── dispatch.py         # 已弃用别名，仅转出 agent.py 的 scope API
+└── observability.py    # 脱敏路由事件（请求指纹 + 暴露的工具，不含原文）
 evals/
 ├── router_requests.jsonl  # dev 集（调参用）
 ├── router_holdout.jsonl   # holdout 集（只做验收）
@@ -84,12 +85,15 @@ print(agent.call_tool(turn, "web_search", query="agent sdk"))
 
 ## 评测指标
 
+先跑默认评测，分别查看 30 条开发样本和 25 条留出样本的报告。查看混淆矩阵中 `chat` 行的 `research` 和 `coding` 两列，再把工具误触发率与门禁阈值比较。调整关键词时只看开发集，最后用留出集验收。 [实战验收标准 §2.12](https://my.feishu.cn/docx/VytpdGqFGoX0h2xuVPfckjpDnTg#doxcn1noB50p5T3EDESl3lEc0fd)
+
 - `route_accuracy`：整体准确率。
-- `false_tool_rate`：**分母是 chat 样本数**，衡量 chat 被误路由到需要工具的任务的比例。
+- `false_tool_rate` 衡量 `chat` 样本被授予工具权限的比例。分母为 `chat` 样本数，分母为零时报告 `0.0`。
 - `per_class`：每类 precision / recall / f1 / support。
-- `confusion_matrix`：期望标签 x 预测标签。
+- `confusion_matrix` 的行是期望标签，列是预测标签。
 - `confidence_buckets`：各置信度区间的样本数与准确率，用于检查置信度是否校准。
-- `latency_ms.p95`：规则路由本地延迟。
+- `latency_ms.p95` 使用最近秩法。将本地路由耗时从小到大排序，取第 `ceil(0.95 × 样本数)` 项。
+- `cost_usd` 在离线规则评测中为 `0.0`。接入真实模型后，按服务端返回的用量和模型单价另行计算费用。
 
 门禁默认值：准确率 ≥ 0.90、false tool rate ≤ 0.05、p95 ≤ 5ms。任一不满足则 CLI 退出码为 1。
 
@@ -103,9 +107,14 @@ python evals/run_eval.py evals/router_holdout.jsonl \
 `StructuredLLMRouter` 通过注入的 `complete` 回调调用任意模型：
 
 ```python
-from router_lab import SingleAgent, StructuredLLMRouter
+from router_lab import RuleBasedRouter, SingleAgent, StructuredLLMRouter
 
-router = StructuredLLMRouter(complete=my_llm_call, model="my-model", max_attempts=3)
+router = StructuredLLMRouter(
+    complete=my_llm_call,
+    model="my-model",
+    max_attempts=3,
+    fallback=RuleBasedRouter(),
+)
 agent = SingleAgent(router=router)      # 只影响意图判断，不切换 Agent
 
 turn = agent.begin("帮我排查线上接口 500")
@@ -114,10 +123,10 @@ print(router.stats()["invalid_output_rate"])
 ```
 
 - 输出必须是单个 JSON 对象，字段 `task_type` / `confidence` / `reason`，拒绝额外字段。
-- 校验失败自动重试，最多 3 次；仍失败抛 `InvalidRouteDecision`。
+- 校验失败默认最多尝试 3 次。配置 `fallback` 后，重试耗尽、模型调用超时，或模型置信度低于规则配置的 `confidence_threshold`（默认 `0.70`）时，由规则路由决定意图和工具范围。未配置规则回退时，重试耗尽和超时分别抛出 `InvalidRouteDecision` 和 `TimeoutError`。
 - 记录 `invalid_output_rate`，作为接入真实模型后的核心质量指标。
 - Prompt 把用户请求放在 `<request>` 标签内并声明为不可信数据，降低提示注入风险。
-- 生产接入时建议 `temperature=0`、固定模型版本，并在低置信/失败时回退规则路由。
+- DeepSeek 适配器使用 `temperature=0`，给单次 SDK 请求配置 10 秒超时。回退后，`router_version` 记录实际产出结论的规则版本。
 - 任何实现 `route(request) -> RouteResult` 的对象都能注入 `SingleAgent`。
 
 ## 开发说明

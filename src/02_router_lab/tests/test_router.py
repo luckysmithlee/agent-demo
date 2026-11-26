@@ -43,14 +43,14 @@ def test_rejects_oversized_requests(router):
 
 
 def test_research_wins_when_it_has_more_evidence(router):
-    # Regression: coding used to win with one keyword against four research ones.
+    # 回归：过去一个 coding 关键词会胜过四个 research 关键词。
     result = router.route("找出 PostgreSQL 最近版本修复的安全漏洞摘要")
 
     assert result.task_type is TaskType.RESEARCH
 
 
 def test_ascii_keywords_use_word_boundaries(router):
-    # "code" must not match inside "barcode"; "fix" must not match "prefix".
+    # “code”不能匹配“barcode”的一部分，“fix”不能匹配“prefix”的一部分。
     assert router.route("用 barcode 举例说明前缀树").task_type is TaskType.CHAT
     assert router.route("解释 prefix 的含义").task_type is TaskType.CHAT
 
@@ -62,7 +62,7 @@ def test_fullwidth_characters_are_normalized(router):
 
 
 def test_keyword_gap_regression(router):
-    # Regression: this coding request used to fall through to chat.
+    # 回归：此 coding 请求过去会错误地落入 chat。
     result = router.route("在 React 页面中增加加载、空状态和错误重试状态")
 
     assert result.task_type is TaskType.CODING
@@ -86,7 +86,7 @@ def test_weak_evidence_defaults_to_chat_with_fallback(router):
 
 
 def test_tie_defaults_to_chat_with_fallback(router):
-    # coding: 代码 + bug = 2; research: 找出 = 2.
+    # coding：代码 + bug = 2；research：找出 = 2。
     result = router.route("找出代码里的 bug")
 
     assert result.task_type is TaskType.CHAT
