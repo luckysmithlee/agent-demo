@@ -61,6 +61,16 @@ assert context.used_chars == budget
 
 向组装器传入工具结果前，可先提取相关证据并控制单段长度。 [工具结果压缩实战](../04_tool_result_compressor/README.md)
 
+## 设计与离线评测
+
+设计文档记录上下文分层、预算决策和定位片段丢失的方法。 [上下文组装设计](docs/context-design.md)
+
+在 Lab 目录运行以下命令，核对构建失败、场地更新、紧预算摘要和部署排查四个场景。输出按案例列出不符预期的字段，任一案例未通过时退出码为 `1`。 [评测数据](evals/context_cases.jsonl)
+
+```bash
+PYTHONPATH=src python evals/run_eval.py
+```
+
 ## 环境约定
 
 - 每个 Lab 使用自己的 `.venv`；根目录 `.venv` 只用于 IDE 解析和当前在做的 Lab

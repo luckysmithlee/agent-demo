@@ -29,7 +29,17 @@ assert summary["important_lines"] == [failure, stderr]
 assert failure not in summary["tail"]
 ```
 
-`failure_count` 统计命中行，同一次失败的多行日志可能分别计数。摘要按行数限制保留范围，单行很长时仍需要按上下文预算取舍。可以把所需命中行作为下一步的工具片段传入 [上下文组装实战](../03_context_assembler/README.md)。
+`failure_count` 统计命中行，同一次失败的多行日志可能分别计数。摘要按行数限制保留范围，单行很长时仍需要按上下文预算取舍。可以把所需命中行作为下一步的工具片段传入上下文组装器。 [上下文组装实战](../03_context_assembler/README.md)
+
+## 设计与离线评测
+
+设计文档说明字符预算、日志命中口径，以及组装上下文前怎样选择压缩方式。 [工具结果压缩设计](docs/compression-design.md)
+
+在 Lab 目录运行以下命令，验收短结果原样保留、长结果首尾截断、跨输出流提取错误和保留尾部之外的错误。任一案例未通过时，报告会列出失败字段并返回退出码 `1`。 [评测数据](evals/compression_cases.jsonl)
+
+```bash
+PYTHONPATH=src python evals/run_eval.py
+```
 
 ## 测试
 

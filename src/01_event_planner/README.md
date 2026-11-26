@@ -25,6 +25,16 @@ PYTHONPATH=src python -m event_planner
 
 示例依次展示容量不足、超预算、档期待确认和刚好满足限制的四条场地记录。把最后一条记录的档期设为 `None` 再运行，比较拟选场地和审批状态。
 
+## 设计与离线评测
+
+设计文档说明场地证据如何转为候选状态，以及草案在什么条件下提交审批。 [活动策划设计](docs/event-planner-design.md)
+
+在 Lab 目录运行以下命令，验收容量和预算边界、报价或档期缺失、多场地的选择顺序、无候选场地四个场景。报告列出不符合预期的字段，任一案例未通过时退出码为 `1`。 [评测数据](evals/event_cases.jsonl)
+
+```bash
+PYTHONPATH=src python evals/run_eval.py
+```
+
 ## 测试
 
 ```bash
@@ -40,6 +50,8 @@ pytest tests/
 event-planner/
 ├── README.md
 ├── pyproject.toml
+├── docs/                # 证据、预算和审批边界
+├── evals/               # 离线场景和评测脚本
 ├── src/event_planner/   # 草案规则和离线示例
 └── tests/               # 人数、预算、证据与审批边界
 ```
