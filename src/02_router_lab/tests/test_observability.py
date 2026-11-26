@@ -23,3 +23,18 @@ def test_event_does_not_contain_raw_request():
     assert event.elapsed_ms == 0.1235
     assert event.router_version == result.router_version
     assert event.matched_keywords == result.matched_keywords
+    assert event.tools_exposed == (
+        "file_edit",
+        "run_tests",
+        "shell",
+        "web_search",
+    )
+
+
+def test_chat_event_exposes_no_tools():
+    request = "解释一下什么是 RAG"
+    result = RuleBasedRouter().route(request)
+
+    event = build_route_event(request, result, elapsed_ms=0.05)
+
+    assert event.tools_exposed == ()

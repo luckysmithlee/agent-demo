@@ -1,6 +1,6 @@
-# 结构化 Router 实战
+# 结构化 Router 实战（单 Agent 架构）
 
-把用户请求结构化分类为 `chat` / `research` / `coding`，为后续 Agent 分派和工具白名单提供依据。当前主线是零依赖、可离线评测的规则路由器，LLM 结构化路由作为低置信度兜底路径。
+把用户请求识别为 `chat` / `research` / `coding` 意图，但意图不再用来选择不同 Agent：整个 Lab 只有一个 Agent、一套工具注册表。意图只决定本轮的行为提示和工具能力范围。规则路由是零依赖、可离线评测的主路径；LLM 结构化路由实现同一个 `route()` 接口，可以直接替换。
 
 ## 快速开始
 
@@ -22,18 +22,53 @@ python evals/run_eval.py
 src/router_lab/
 ├── router.py           # 规则路由：归一化、评分、置信度、低置信兜底标记
 ├── rules.py            # 版本化关键词表与权重
-├── task_types.py       # TaskType 枚举
+├── task_types.py       # TaskType（意图标签）
+├── agent.py            # 单 Agent：轮次契约 + 唯一工具注册表 + 能力策略
 ├── eval_runner.py      # 评测、分层指标、混淆矩阵、门禁 CLI
 ├── structured_llm.py   # LLM JSON schema 校验、重试、非法输出率
 ├── llm_client.py       # DeepSeek 补全客户端（OpenAI 兼容，读取根目录 .env）
-├── dispatch.py         # TaskType -> handler / 工具白名单
-└── observability.py    # 脱敏路由事件（请求指纹，不含原文）
+├── observability.py    # 脱敏路由事件（请求指纹 + 暴露的工具，不含原文）
+└── dispatch.py         # 已弃用别名，仅转出 agent.py 的 scope API
 evals/
 ├── router_requests.jsonl  # dev 集（调参用）
 ├── router_holdout.jsonl   # holdout 集（只做验收）
 └── run_eval.py
 docs/router-design.md    # 设计决策与未决问题
 ```
+
+## 单 Agent 架构
+
+- **一个入口**：所有请求都走 `SingleAgent.begin()`，没有 chat / research / coding 三套 handler，也没有第二个 Agent。
+- **一套工具**：`agent.TOOLS` 是唯一注册表，每个 `ToolSpec` 声明 `side_effects` 与 `network` 能力。
+- **一张能力表**：`IntentCapability` 说明某意图允许哪些能力，`ToolScope` 由注册表过滤推导，不手写白名单。
+- **运行时再校验**：`call_tool()` 不信任提示词，越权调用直接抛 `ToolNotPermittedError`。
+
+| intent | side effects | network | 本轮可用工具 |
+| --- | --- | --- | --- |
+| chat | 否 | 否 | 无 |
+| research | 否 | 是 | `web_search` |
+| coding | 是 | 是 | `shell`, `file_edit`, `run_tests`, `web_search` |
+
+```python
+from router_lab import SingleAgent
+
+agent = SingleAgent(executors={"web_search": my_search})
+turn = agent.begin("搜索今天最新的 Agent SDK 文章")
+
+print(turn.intent)          # TaskType.RESEARCH
+print(turn.scope.tools)     # frozenset({'web_search'})
+print(turn.guidance)        # 本轮行为提示，替代原来的 handler prompt
+
+print(agent.call_tool(turn, "web_search", query="agent sdk"))
+```
+
+约束：
+
+- chat 的工具集恒为空，保留“闲聊不触发工具副作用”这条安全不变量。
+- coding 现在也能 `web_search`：单 Agent 共用一套工具，不再按任务类型拆能力。
+- 新增工具只改 `TOOLS` 并确认能力边界，不再新增 handler 表。
+
+`AgentTurn` 字段：`request`、`intent`、`confidence`、`scope`、`guidance`、`reason`、`matched_keywords`、`router_version`、`fallback_recommended`。
 
 ## 路由器行为
 
@@ -63,16 +98,18 @@ python evals/run_eval.py evals/router_holdout.jsonl \
   --min-accuracy 0.95 --max-false-tool-rate 0.02 --max-p95-ms 2
 ```
 
-## LLM 结构化路由（兜底）
+## LLM 结构化路由（替换实现，而非第二个 Agent）
 
 `StructuredLLMRouter` 通过注入的 `complete` 回调调用任意模型：
 
 ```python
-from router_lab import StructuredLLMRouter
+from router_lab import SingleAgent, StructuredLLMRouter
 
 router = StructuredLLMRouter(complete=my_llm_call, model="my-model", max_attempts=3)
-result = router.route("帮我排查线上接口 500")
-print(result.task_type, result.confidence)
+agent = SingleAgent(router=router)      # 只影响意图判断，不切换 Agent
+
+turn = agent.begin("帮我排查线上接口 500")
+print(turn.intent, turn.confidence)
 print(router.stats()["invalid_output_rate"])
 ```
 
@@ -81,21 +118,11 @@ print(router.stats()["invalid_output_rate"])
 - 记录 `invalid_output_rate`，作为接入真实模型后的核心质量指标。
 - Prompt 把用户请求放在 `<request>` 标签内并声明为不可信数据，降低提示注入风险。
 - 生产接入时建议 `temperature=0`、固定模型版本，并在低置信/失败时回退规则路由。
-
-## 分派与工具白名单
-
-`router_lab.dispatch` 定义任务类型到 handler 的契约：
-
-| TaskType | allowed_tools |
-| --- | --- |
-| chat | 无 |
-| research | `web_search` |
-| coding | `shell`, `file_edit`, `run_tests` |
-
-chat 永不带工具，避免规则误判造成工具副作用。
+- 任何实现 `route(request) -> RouteResult` 的对象都能注入 `SingleAgent`。
 
 ## 开发说明
 
 - 关键词只改 `src/router_lab/rules.py`，并同步更新 `ROUTER_VERSION`。
 - 调参只使用 `evals/router_requests.jsonl`；`router_holdout.jsonl` 只用于验收，禁止针对它改关键词。
+- 新增工具只改 `agent.TOOLS`，能力边界在 `CAPABILITIES` 确认；不要重新引入按任务类型的 handler 表。
 - 提交前运行 `pytest -q` 与 `python evals/run_eval.py`。

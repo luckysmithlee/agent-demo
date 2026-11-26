@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "router-lab"
-version = "0.2.0"
-description = "Structured task router experiments for AI agents."
+version = "0.3.0"
+description = "Single-agent routing experiments for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

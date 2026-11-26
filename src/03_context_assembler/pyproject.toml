@@ -1,0 +1,18 @@
+[project]
+name = "context-assembler"
+version = "0.1.0"
+description = "Context Assembler 实践项目。"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

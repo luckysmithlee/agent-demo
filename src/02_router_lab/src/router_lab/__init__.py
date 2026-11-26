@@ -1,5 +1,14 @@
-"""Task routing primitives for agent requests."""
+"""Single-agent routing primitives for agent requests."""
 
+from .agent import (
+    AgentTurn,
+    SingleAgent,
+    ToolNotPermittedError,
+    ToolScope,
+    UnknownToolError,
+    scope_for,
+    tool_allowed,
+)
 from .llm_client import build_completer
 from .router import (
     InvalidRequestError,
@@ -13,13 +22,20 @@ from .rules import ROUTER_VERSION
 from .task_types import TaskType
 
 __all__ = [
+    "AgentTurn",
     "InvalidRequestError",
     "ROUTER_VERSION",
     "RouteConfig",
     "RouteResult",
     "RuleBasedRouter",
+    "SingleAgent",
     "TaskType",
+    "ToolNotPermittedError",
+    "ToolScope",
+    "UnknownToolError",
     "build_completer",
     "measure_route",
     "route_request",
+    "scope_for",
+    "tool_allowed",
 ]

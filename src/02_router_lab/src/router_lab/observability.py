@@ -1,11 +1,14 @@
 """Route event records that are safe to log.
 
 Raw request text never leaves this module; only a short stable fingerprint.
+``tools_exposed`` records the blast radius of a turn: which tools the single
+agent could have called, not which ones it did call.
 """
 
 import hashlib
 from dataclasses import dataclass
 
+from .agent import scope_for
 from .router import RouteResult, normalize_text
 
 
@@ -18,6 +21,7 @@ class RouteEvent:
     matched_keywords: tuple[str, ...]
     router_version: str
     elapsed_ms: float
+    tools_exposed: tuple[str, ...] = ()
 
 
 def request_fingerprint(request: str) -> str:
@@ -36,4 +40,5 @@ def build_route_event(
         matched_keywords=result.matched_keywords,
         router_version=result.router_version,
         elapsed_ms=round(elapsed_ms, 4),
+        tools_exposed=tuple(sorted(scope_for(result.task_type).tools)),
     )

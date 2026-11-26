@@ -2,7 +2,7 @@
 
 ## 背景
 
-Agent 入口需要一个低延迟、可解释、可回归的请求分类器，把请求路由到 chat / research / coding，并决定是否允许工具调用。规则路由器是第一版基线；LLM 结构化路由只作为低置信度兜底。
+Agent 入口需要一个低延迟、可解释、可回归的意图分类器：识别 chat / research / coding，并决定单 Agent 本轮的工具能力范围。规则路由器是第一版基线；LLM 结构化路由只作为低置信度兜底。
 
 ## 决策
 
@@ -49,14 +49,25 @@ Agent 入口需要一个低延迟、可解释、可回归的请求分类器，�
 - 除整体准确率外，报告每类 P/R/F1、混淆矩阵、置信度分桶。
 - CI 门禁：准确率 ≥ 0.90、false tool rate ≤ 0.05、p95 ≤ 5ms。
 
-### 8. 工具白名单
+### 8. 单 Agent 与工具白名单
 
-`dispatch.py` 把任务类型映射到 handler 和允许的工具。chat 的工具集为空；即使路由给出高置信度，chat 也不能触发工具。
+`SingleAgent.begin()` 校验请求，根据分类结果生成本轮的指引与工具权限。`SingleAgent.call_tool()` 检查权限后执行调用方注册的工具。chat 的工具集始终为空，research 可访问网络，coding 可访问网络并使用本地执行工具。
+
+早期版本用 `dispatch.py` 为每个任务类型维护 `HandlerSpec`，实际等于三个隐式 Agent：提示词、工具表和约定各自维护，新增一个工具要改多处，能力表容易漂移。现在收敛为：
+
+- 一个轮次契约 `AgentTurn`：路由结果 + `scope` + 一句 `guidance`，替代原来的 handler prompt。
+- 一套工具注册表 `TOOLS`：每个 `ToolSpec` 声明 `side_effects` / `network`。
+- 一张能力表 `CAPABILITIES`：chat 不允许任何能力；research 只允许网络（只读）；coding 允许全部能力。
+- `scope_for(intent)` 从注册表过滤推导白名单，不手写；`call_tool()` 执行前重新校验，越权抛 `ToolNotPermittedError`。
+- `observability.RouteEvent.tools_exposed` 记录本轮暴露的工具集，便于审计爆炸半径。
+
+行为变化：coding 现在也能 `web_search`（单 Agent 共用一套工具，是拆分能力表的预期收益）；chat 仍恒为空集，安全不变量不变。
 
 ## 未决问题
 
 - **置信度校准**：当前公式是启发式，需要更大数据集做分桶校准或等渗回归。
 - **多意图请求**：“搜索并修复”同时含 research 和 coding，当前返回单一主标签；可扩展 `secondary_task_types`。
 - **真实成本核算**：规则路由 `cost_usd=0`；接入 LLM 后需要按 token 记录成本。
+- **副作用工具的人工确认**：`side_effects=True` 目前只做范围限制，还没有执行前审批与回滚机制。
 - **生产日志落点**：`observability.RouteEvent` 已脱敏，但尚未接入实际日志/追踪后端。
 - **长尾词表维护**：关键词仍是手工维护，后续可考虑从误判样本挖掘候选词，但需保持 holdout 隔离。
